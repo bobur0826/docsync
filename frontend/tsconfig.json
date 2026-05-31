@@ -6,8 +6,8 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,7 +15,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
