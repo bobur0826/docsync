@@ -4,8 +4,16 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { sql } from '../db/client.js';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy clients — only instantiated when an API key is actually present
+function getAnthropic(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not set');
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
+
+function getOpenAI(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not set');
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function generateDocumentSummary(params: {
   docNumber: string;
@@ -30,7 +38,7 @@ Status: ${params.status}
 
 Write the summary as if explaining it to a project stakeholder who is not deeply technical.`;
 
-  const message = await anthropic.messages.create({
+  const message = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 300,
     messages: [{ role: 'user', content: prompt }],
@@ -52,7 +60,7 @@ export async function generateAndStoreEmbedding(
     return; // Skip embeddings in dev without real keys
   }
   try {
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
     });
@@ -76,7 +84,7 @@ export async function semanticSearch(
   query: string,
   limit = 10
 ): Promise<{ id: string; docNumber: string; title: string; similarity: number }[]> {
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: 'text-embedding-3-small',
     input: query,
   });
