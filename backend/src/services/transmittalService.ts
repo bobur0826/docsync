@@ -1,5 +1,6 @@
 // backend/src/services/transmittalService.ts
 
+import postgres from 'postgres';
 import { sql } from '../db/client.js';
 
 export interface TransmittalRow {
@@ -34,7 +35,7 @@ export interface TransmittalItemRow {
 }
 
 async function generateTransmittalNumber(
-  tx: Parameters<Parameters<typeof sql.begin>[0]>[0],
+  tx: postgres.TransactionSql,
   projectId: string,
   projectCode: string
 ): Promise<string> {

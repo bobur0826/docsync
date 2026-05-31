@@ -9,8 +9,9 @@ export interface JwtPayload {
   email: string;
 }
 
-declare module 'fastify' {
-  interface FastifyRequest {
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: JwtPayload;
     user: JwtPayload;
   }
 }
@@ -21,9 +22,6 @@ export async function authenticate(
 ): Promise<void> {
   try {
     await request.jwtVerify();
-    // @fastify/jwt sets request.user after successful verification
-    const payload = request.user as JwtPayload;
-    request.user = payload;
   } catch (err) {
     return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid or missing token' });
   }

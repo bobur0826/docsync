@@ -79,7 +79,7 @@ async function build(): Promise<FastifyInstance> {
   await app.register(userRoutes, { prefix: '/api/v1/users' });
   await app.register(taskRoutes, { prefix: '/api/v1/tasks' });
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {
     app.log.error(error);
     const statusCode = error.statusCode ?? 500;
     reply.code(statusCode).send({

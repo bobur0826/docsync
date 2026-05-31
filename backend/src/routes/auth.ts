@@ -4,6 +4,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { sql } from '../db/client.js';
+import type { JwtPayload } from '../middleware/auth.js';
 
 const RegisterBody = z.object({
   tenantName: z.string().min(2),
@@ -105,7 +106,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const token = app.jwt.sign({
       id: user.id,
       tenantId: tenant.id,
-      role: user.role,
+      role: user.role as JwtPayload['role'],
       email,
     });
 
@@ -165,7 +166,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const token = app.jwt.sign({
       id: user.id,
       tenantId: user.tenantId,
-      role: user.role,
+      role: user.role as JwtPayload['role'],
       email,
     });
 
@@ -197,7 +198,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const token = app.jwt.sign({
       id: user.id,
       tenantId: user.tenantId,
-      role: user.role,
+      role: user.role as JwtPayload['role'],
       email,
     });
 
