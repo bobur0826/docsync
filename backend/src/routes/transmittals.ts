@@ -4,6 +4,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { logAudit } from '../middleware/tenant.js';
+import { sql } from '../db/client.js';
 import {
   createTransmittal,
   sendTransmittal,
@@ -96,6 +97,71 @@ export async function transmittalRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return reply.send(transmittal);
+  });
+
+  // ── Edit draft transmittal ────────────────────────────────────────────────
+  app.patch('/:id', async (request, reply) => {
+    const { role, tenantId, id: userId } = request.user;
+    if (role === 'engineer' || role === 'user') {
+      return reply.code(403).send({ error: 'Only admins and managers can edit transmittals' });
+    }
+    const { id } = request.params as { id: string };
+
+    const EditBody = z.object({
+      recipientName:  z.string().min(1).optional(),
+      recipientEmail: z.string().email().optional(),
+      subject:        z.string().optional(),
+      notes:          z.string().optional(),
+      purpose:        z.enum(['for_review','for_construction','for_information','for_approval']).optional(),
+    });
+    const parsed = EditBody.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Validation error', issues: parsed.error.issues });
+    }
+    const u = parsed.data;
+
+    const [row] = await sql<[{ id: string; status: string }?]>`
+      SELECT id, status FROM transmittals WHERE id = ${id} AND tenant_id = ${tenantId}
+    `;
+    if (!row) return reply.code(404).send({ error: 'Transmittal not found' });
+    if (row.status !== 'draft') {
+      return reply.code(400).send({ error: 'Only draft transmittals can be edited' });
+    }
+
+    const [updated] = await sql<[Record<string, unknown>]>`
+      UPDATE transmittals SET
+        recipient_name  = CASE WHEN ${u.recipientName !== undefined}::boolean  THEN ${u.recipientName ?? null}  ELSE recipient_name  END,
+        recipient_email = CASE WHEN ${u.recipientEmail !== undefined}::boolean THEN ${u.recipientEmail ?? null} ELSE recipient_email END,
+        subject         = CASE WHEN ${u.subject !== undefined}::boolean        THEN ${u.subject ?? null}        ELSE subject         END,
+        notes           = CASE WHEN ${u.notes !== undefined}::boolean          THEN ${u.notes ?? null}          ELSE notes           END,
+        purpose         = CASE WHEN ${u.purpose !== undefined}::boolean        THEN ${u.purpose ?? null}        ELSE purpose         END,
+        updated_at      = NOW()
+      WHERE id = ${id} AND tenant_id = ${tenantId}
+      RETURNING *
+    `;
+    await logAudit({ tenantId, userId, entityType: 'transmittal', entityId: id, action: 'update', newData: u });
+    return reply.send(updated);
+  });
+
+  // ── Delete draft transmittal ──────────────────────────────────────────────
+  app.delete('/:id', async (request, reply) => {
+    const { role, tenantId, id: userId } = request.user;
+    if (role === 'engineer' || role === 'user') {
+      return reply.code(403).send({ error: 'Only admins and managers can delete transmittals' });
+    }
+    const { id } = request.params as { id: string };
+
+    const [row] = await sql<[{ id: string; status: string }?]>`
+      SELECT id, status FROM transmittals WHERE id = ${id} AND tenant_id = ${tenantId}
+    `;
+    if (!row) return reply.code(404).send({ error: 'Transmittal not found' });
+    if (row.status !== 'draft') {
+      return reply.code(400).send({ error: 'Only draft transmittals can be deleted' });
+    }
+
+    await sql`DELETE FROM transmittals WHERE id = ${id} AND tenant_id = ${tenantId}`;
+    await logAudit({ tenantId, userId, entityType: 'transmittal', entityId: id, action: 'delete' });
+    return reply.code(204).send();
   });
 
   app.post('/:id/respond', async (request, reply) => {

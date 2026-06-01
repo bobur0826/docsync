@@ -124,6 +124,63 @@ export async function documentRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ...doc, versions: versionsWithUrls });
   });
 
+  // ── Edit document metadata ────────────────────────────────────────────────
+  app.patch('/:id', async (request, reply) => {
+    const { role, tenantId, id: userId } = request.user;
+    if (role === 'user') {
+      return reply.code(403).send({ error: 'You do not have permission to edit documents' });
+    }
+    const { id } = request.params as { id: string };
+
+    const EditBody = z.object({
+      title: z.string().min(1).optional(),
+      discipline: z.string().min(1).optional(),
+      docType: z.string().min(1).optional(),
+      currentVersion: z.string().min(1).optional(),
+    });
+    const parsed = EditBody.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Validation error', issues: parsed.error.issues });
+    }
+    const u = parsed.data;
+    if (Object.keys(u).length === 0) {
+      return reply.code(400).send({ error: 'No fields to update' });
+    }
+
+    const [doc] = await sql<[{ id: string }?]>`
+      UPDATE documents SET
+        title          = CASE WHEN ${u.title !== undefined}::boolean         THEN ${u.title ?? null}         ELSE title          END,
+        discipline     = CASE WHEN ${u.discipline !== undefined}::boolean    THEN ${u.discipline ?? null}    ELSE discipline     END,
+        doc_type       = CASE WHEN ${u.docType !== undefined}::boolean       THEN ${u.docType ?? null}       ELSE doc_type       END,
+        current_version= CASE WHEN ${u.currentVersion !== undefined}::boolean THEN ${u.currentVersion ?? null} ELSE current_version END,
+        updated_at     = NOW()
+      WHERE id = ${id} AND tenant_id = ${tenantId}
+      RETURNING id
+    `;
+    if (!doc) return reply.code(404).send({ error: 'Document not found' });
+
+    await logAudit({ tenantId, userId, entityType: 'document', entityId: id, action: 'update', newData: u });
+    const updated = await getDocumentById(id, tenantId);
+    return reply.send(updated);
+  });
+
+  // ── Delete document ───────────────────────────────────────────────────────
+  app.delete('/:id', async (request, reply) => {
+    const { role, tenantId, id: userId } = request.user;
+    if (role !== 'admin' && role !== 'manager') {
+      return reply.code(403).send({ error: 'Only admins and managers can delete documents' });
+    }
+    const { id } = request.params as { id: string };
+
+    const [doc] = await sql<[{ id: string }?]>`
+      DELETE FROM documents WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING id
+    `;
+    if (!doc) return reply.code(404).send({ error: 'Document not found' });
+
+    await logAudit({ tenantId, userId, entityType: 'document', entityId: id, action: 'delete' });
+    return reply.code(204).send();
+  });
+
   app.patch('/:id/status', async (request, reply) => {
     // Users (basic role) cannot change document status
     if (request.user.role === 'user') {

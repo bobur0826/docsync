@@ -1,7 +1,7 @@
 // frontend/src/components/DocumentCard.tsx
 
 import React from 'react';
-import { FileText, Clock } from 'lucide-react';
+import { FileText, Clock, Pencil, Trash2 } from 'lucide-react';
 import type { Document } from '../types/index';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -34,9 +34,13 @@ const DISCIPLINE_COLORS: Record<string, string> = {
 interface Props {
   document: Document;
   onClick: (doc: Document) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  onEdit?: (doc: Document) => void;
+  onDelete?: (doc: Document) => void;
 }
 
-export const DocumentCard: React.FC<Props> = ({ document: doc, onClick }) => {
+export const DocumentCard: React.FC<Props> = ({ document: doc, onClick, canEdit, canDelete, onEdit, onDelete }) => {
   const disciplineColor =
     DISCIPLINE_COLORS[doc.discipline] ?? 'bg-gray-100 text-gray-700';
   const statusStyle = STATUS_STYLES[doc.status] ?? 'bg-gray-100 text-gray-700';
@@ -84,6 +88,29 @@ export const DocumentCard: React.FC<Props> = ({ document: doc, onClick }) => {
               <span>{updatedDate}</span>
             </div>
           </div>
+
+          {(canEdit || canDelete) && (
+            <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100">
+              {canEdit && onEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(doc); }}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Edit
+                </button>
+              )}
+              {canDelete && onDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+                  className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors ml-auto"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </button>

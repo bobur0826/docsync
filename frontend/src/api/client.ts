@@ -178,6 +178,13 @@ export const documentsApi = {
     );
     return res.data;
   },
+  update: async (id: string, data: { title?: string; discipline?: string; docType?: string; currentVersion?: string }) => {
+    const res = await axiosInstance.patch<Document>(`/documents/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: string) => {
+    await axiosInstance.delete(`/documents/${id}`);
+  },
   regenerateSummary: async (id: string) => {
     const res = await axiosInstance.post<{ summary: string }>(`/documents/${id}/ai-summary`);
     return res.data;
@@ -238,6 +245,19 @@ export const transmittalsApi = {
   ) => {
     const res = await axiosInstance.post<Transmittal>(`/transmittals/${id}/respond`, data);
     return res.data;
+  },
+  update: async (id: string, data: {
+    recipientName?: string;
+    recipientEmail?: string;
+    subject?: string;
+    notes?: string;
+    purpose?: Transmittal['purpose'];
+  }) => {
+    const res = await axiosInstance.patch<Transmittal>(`/transmittals/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: string) => {
+    await axiosInstance.delete(`/transmittals/${id}`);
   },
 };
 

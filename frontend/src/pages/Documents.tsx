@@ -1,12 +1,13 @@
 // frontend/src/pages/Documents.tsx
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, Plus, X } from 'lucide-react';
 import { documentsApi, authApi } from '../api/client';
 import { DocumentCard } from '../components/DocumentCard';
 import { DetailPanel } from '../components/DetailPanel';
 import { UploadDocumentModal } from '../components/UploadDocumentModal';
+import { EditDocumentModal } from '../components/EditDocumentModal';
 import type { Document, DocumentStatus } from '../types/index';
 
 const STATUS_FILTERS: { value: DocumentStatus | ''; label: string }[] = [
@@ -27,6 +28,8 @@ export const DocumentsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Document | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [editDoc, setEditDoc] = useState<Document | null>(null);
+  const queryClient = useQueryClient();
   const PAGE_SIZE = 24;
 
   const { data, isLoading } = useQuery({
@@ -62,6 +65,24 @@ export const DocumentsPage: React.FC = () => {
   };
 
   const hasFilters = !!search || !!status || !!discipline;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => documentsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setSelected(null);
+    },
+  });
+
+  const handleDelete = (doc: Document) => {
+    if (confirm(`Delete "${doc.title}" (${doc.docNumber})? This cannot be undone.`)) {
+      deleteMutation.mutate(doc.id);
+    }
+  };
+
+  const role = currentUser?.role;
+  const canEdit = role === 'admin' || role === 'manager' || role === 'engineer';
+  const canDelete = role === 'admin' || role === 'manager';
 
   return (
     <div className="flex h-full relative">
@@ -151,6 +172,10 @@ export const DocumentsPage: React.FC = () => {
                     key={doc.id}
                     document={doc}
                     onClick={setSelected}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onEdit={setEditDoc}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>
@@ -193,6 +218,16 @@ export const DocumentsPage: React.FC = () => {
 
       {showUpload && (
         <UploadDocumentModal onClose={() => setShowUpload(false)} />
+      )}
+
+      {editDoc && (
+        <EditDocumentModal
+          document={editDoc}
+          onClose={() => setEditDoc(null)}
+          onSaved={(updated) => {
+            if (selected?.id === updated.id) setSelected(updated);
+          }}
+        />
       )}
     </div>
   );

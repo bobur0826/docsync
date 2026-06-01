@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, Send, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText,
+  Plus, Send, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Pencil, Trash2, X,
 } from 'lucide-react';
-import { transmittalsApi } from '../api/client';
+import { transmittalsApi, authApi } from '../api/client';
 import { TransmittalForm } from '../components/TransmittalForm';
 import type { Transmittal } from '../types/index';
 
@@ -27,7 +27,10 @@ const TransmittalRow: React.FC<{
   transmittal: Transmittal;
   onSend?: (id: string) => void;
   sending?: boolean;
-}> = ({ transmittal: t, onSend, sending }) => (
+  canManage?: boolean;
+  onEdit?: (t: Transmittal) => void;
+  onDelete?: (t: Transmittal) => void;
+}> = ({ transmittal: t, onSend, sending, canManage, onEdit, onDelete }) => (
   <div className="flex items-start gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
     <div className="flex-shrink-0 mt-0.5">
       {t.direction === 'outgoing'
@@ -72,25 +75,143 @@ const TransmittalRow: React.FC<{
         )}
       </div>
     </div>
-    {t.status === 'draft' && t.direction === 'outgoing' && onSend && (
-      <button
-        onClick={() => onSend(t.id)}
-        disabled={sending}
-        className="flex-shrink-0 flex items-center gap-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
-        <Send className="h-3 w-3" />
-        Send
-      </button>
-    )}
+    <div className="flex-shrink-0 flex items-center gap-2">
+      {t.status === 'draft' && t.direction === 'outgoing' && onSend && (
+        <button
+          onClick={() => onSend(t.id)}
+          disabled={sending}
+          className="flex items-center gap-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          <Send className="h-3 w-3" />
+          Send
+        </button>
+      )}
+      {t.status === 'draft' && canManage && onEdit && (
+        <button
+          onClick={() => onEdit(t)}
+          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
+        >
+          <Pencil className="h-3 w-3" />
+          Edit
+        </button>
+      )}
+      {t.status === 'draft' && canManage && onDelete && (
+        <button
+          onClick={() => onDelete(t)}
+          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 px-2 py-1.5 rounded hover:bg-red-50 transition-colors"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
   </div>
 );
 
+const PURPOSE_OPTIONS = [
+  { value: 'for_review', label: 'For Review' },
+  { value: 'for_construction', label: 'For Construction' },
+  { value: 'for_information', label: 'For Information' },
+  { value: 'for_approval', label: 'For Approval' },
+] as const;
+
+const EditTransmittalModal: React.FC<{
+  transmittal: Transmittal;
+  onClose: () => void;
+  onSaved: () => void;
+}> = ({ transmittal: t, onClose, onSaved }) => {
+  const [recipientName, setRecipientName] = useState(t.recipientName);
+  const [recipientEmail, setRecipientEmail] = useState(t.recipientEmail);
+  const [subject, setSubject] = useState(t.subject ?? '');
+  const [notes, setNotes] = useState(t.notes ?? '');
+  const [purpose, setPurpose] = useState(t.purpose);
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: () => transmittalsApi.update(t.id, { recipientName, recipientEmail, subject: subject || undefined, notes: notes || undefined, purpose }),
+    onSuccess: onSaved,
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg ?? 'Failed to save');
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Edit Transmittal</h2>
+            <p className="text-xs text-gray-500 font-mono">{t.transmittalNo}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Recipient Name</label>
+              <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Recipient Email</label>
+              <input value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+            <select value={purpose} onChange={(e) => setPurpose(e.target.value as Transmittal['purpose'])}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {PURPOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+            <input value={subject} onChange={(e) => setSubject(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+          </div>
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+        </div>
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-200">
+          <button onClick={onClose} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => mutation.mutate()} disabled={mutation.isPending}
+            className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {mutation.isPending ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const TransmittalsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
+  const [editingT, setEditingT] = useState<Transmittal | null>(null);
   const [outgoingPage, setOutgoingPage] = useState(1);
   const [incomingPage, setIncomingPage] = useState(1);
   const PAGE_SIZE = 10;
   const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({ queryKey: ['me'], queryFn: authApi.me });
+  const canManage = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => transmittalsApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transmittals'] }),
+  });
+
+  const handleDelete = (t: Transmittal) => {
+    if (confirm(`Delete transmittal ${t.transmittalNo}? This cannot be undone.`)) {
+      deleteMutation.mutate(t.id);
+    }
+  };
 
   const { data: outgoing, isLoading: loadingOut } = useQuery({
     queryKey: ['transmittals', 'outgoing', outgoingPage],
@@ -149,6 +270,9 @@ export const TransmittalsPage: React.FC = () => {
                 transmittal={t}
                 onSend={(id) => sendMutation.mutate(id)}
                 sending={sendMutation.isPending}
+                canManage={canManage}
+                onEdit={setEditingT}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -196,7 +320,13 @@ export const TransmittalsPage: React.FC = () => {
               </div>
             )}
             {incoming?.rows.map((t) => (
-              <TransmittalRow key={t.id} transmittal={t} />
+              <TransmittalRow
+                key={t.id}
+                transmittal={t}
+                canManage={canManage}
+                onEdit={setEditingT}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
           {incoming && Math.ceil(incoming.total / PAGE_SIZE) > 1 && (
@@ -226,6 +356,17 @@ export const TransmittalsPage: React.FC = () => {
           onClose={() => setShowForm(false)}
           onCreated={() => {
             setShowForm(false);
+            queryClient.invalidateQueries({ queryKey: ['transmittals'] });
+          }}
+        />
+      )}
+
+      {editingT && (
+        <EditTransmittalModal
+          transmittal={editingT}
+          onClose={() => setEditingT(null)}
+          onSaved={() => {
+            setEditingT(null);
             queryClient.invalidateQueries({ queryKey: ['transmittals'] });
           }}
         />
