@@ -34,13 +34,13 @@ export const UploadDocumentModal: React.FC<Props> = ({ onClose }) => {
     mutationFn: () => {
       if (!file) throw new Error('No file selected');
       const fd = new FormData();
-      fd.append('file', file);
       fd.append('projectId', projectId);
       fd.append('docNumber', docNumber);
       fd.append('title', title);
       fd.append('discipline', discipline);
       fd.append('docType', docType);
       if (changeNote) fd.append('changeNote', changeNote);
+      fd.append('file', file); // file must come last for multipart parsing
       return documentsApi.create(fd);
     },
     onSuccess: () => {
