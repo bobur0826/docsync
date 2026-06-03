@@ -12,6 +12,8 @@ import type {
   PaginatedResponse,
   MdrStatus,
   Task,
+  ChangeRequest,
+  ChangeRequestStatus,
 } from '../types/index';
 
 const TOKEN_KEY = 'docsync_token';
@@ -323,6 +325,35 @@ export const tasksApi = {
   },
   delete: async (id: string) => {
     await axiosInstance.delete(`/tasks/${id}`);
+  },
+};
+
+// ─── Change Requests ──────────────────────────────────────────────────────────
+export const changeRequestsApi = {
+  list: async (params?: { status?: string; category?: string; page?: number; pageSize?: number }) => {
+    const res = await axiosInstance.get<PaginatedResponse<ChangeRequest>>('/change-requests', { params });
+    return res.data;
+  },
+  get: async (id: string) => {
+    const res = await axiosInstance.get<ChangeRequest>(`/change-requests/${id}`);
+    return res.data;
+  },
+  create: async (data: {
+    title: string;
+    description: string;
+    category?: string;
+    priority?: string;
+    projectId?: string;
+  }) => {
+    const res = await axiosInstance.post<ChangeRequest>('/change-requests', data);
+    return res.data;
+  },
+  review: async (id: string, data: { status: ChangeRequestStatus; reviewNote?: string }) => {
+    const res = await axiosInstance.patch<ChangeRequest>(`/change-requests/${id}/review`, data);
+    return res.data;
+  },
+  delete: async (id: string) => {
+    await axiosInstance.delete(`/change-requests/${id}`);
   },
 };
 

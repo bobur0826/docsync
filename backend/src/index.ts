@@ -14,6 +14,7 @@ import { projectRoutes } from './routes/projects.js';
 import { workflowRoutes } from './routes/workflows.js';
 import { userRoutes } from './routes/users.js';
 import { taskRoutes } from './routes/tasks.js';
+import { changeRequestRoutes } from './routes/changeRequests.js';
 import { authenticate } from './middleware/auth.js';
 
 declare module 'fastify' {
@@ -78,6 +79,7 @@ async function build(): Promise<FastifyInstance> {
   await app.register(workflowRoutes, { prefix: '/api/v1/workflows' });
   await app.register(userRoutes, { prefix: '/api/v1/users' });
   await app.register(taskRoutes, { prefix: '/api/v1/tasks' });
+  await app.register(changeRequestRoutes, { prefix: '/api/v1/change-requests' });
 
   app.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {
     app.log.error(error);

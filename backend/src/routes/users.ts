@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { sql } from '../db/client.js';
 import { authenticate } from '../middleware/auth.js';
 
-const ALL_PAGES = ['projects', 'documents', 'transmittals', 'mdr', 'tasks', 'users'] as const;
+const ALL_PAGES = ['projects', 'documents', 'transmittals', 'mdr', 'tasks', 'users', 'change_requests'] as const;
 
 const InviteBody = z.object({
   email: z.string().email(),

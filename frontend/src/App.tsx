@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-do
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard, FileText, Send, TableProperties, FolderKanban,
-  LogOut, CheckSquare, Users, Loader2, Building2, ChevronDown, Check,
+  LogOut, CheckSquare, Users, Loader2, Building2, ChevronDown, Check, ClipboardList,
 } from 'lucide-react';
 import { DocumentsPage } from './pages/Documents';
 import { TransmittalsPage } from './pages/Transmittals';
@@ -13,6 +13,7 @@ import { MDRPage } from './pages/MDR';
 import { ProjectsPage } from './pages/Projects';
 import { TasksPage } from './pages/Tasks';
 import { UsersPage } from './pages/Users';
+import { ChangeRequestsPage } from './pages/ChangeRequests';
 import { getToken, clearToken, authApi } from './api/client';
 import type { CompanyOption } from './api/client';
 
@@ -26,7 +27,8 @@ const ALL_NAV = [
   { to: '/transmittals', icon: Send,            label: 'Transmittals', key: 'transmittals' },
   { to: '/mdr',          icon: TableProperties, label: 'MDR',          key: 'mdr' },
   { to: '/tasks',        icon: CheckSquare,     label: 'Tasks',        key: 'tasks' },
-  { to: '/users',        icon: Users,           label: 'Users',        key: 'users' },
+  { to: '/users',           icon: Users,          label: 'Users',           key: 'users' },
+  { to: '/change-requests', icon: ClipboardList,  label: 'Change Requests', key: 'change_requests' },
 ];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -373,8 +375,9 @@ function ProtectedRoutes() {
         <Route path="/transmittals" element={<GuardedRoute pageKey="transmittals"><TransmittalsPage /></GuardedRoute>} />
         <Route path="/mdr"          element={<GuardedRoute pageKey="mdr"><MDRPage /></GuardedRoute>} />
         <Route path="/tasks"        element={<GuardedRoute pageKey="tasks"><TasksPage /></GuardedRoute>} />
-        <Route path="/users"        element={<GuardedRoute pageKey="users"><UsersPage /></GuardedRoute>} />
-        <Route path="*"             element={<Navigate to="/projects" replace />} />
+        <Route path="/users"           element={<GuardedRoute pageKey="users"><UsersPage /></GuardedRoute>} />
+        <Route path="/change-requests" element={<GuardedRoute pageKey="change_requests"><ChangeRequestsPage /></GuardedRoute>} />
+        <Route path="*"                element={<Navigate to="/projects" replace />} />
       </Routes>
     </AppShell>
   );

@@ -15,7 +15,8 @@ const PAGES = [
   { key: 'transmittals', label: 'Transmittals' },
   { key: 'mdr',          label: 'MDR' },
   { key: 'tasks',        label: 'Tasks' },
-  { key: 'users',        label: 'Users' },
+  { key: 'users',           label: 'Users' },
+  { key: 'change_requests', label: 'Change Requests' },
 ];
 
 const ROLES = ['admin', 'manager', 'engineer', 'user'] as const;

@@ -181,6 +181,31 @@ export interface PaginatedResponse<T> {
   total: number;
 }
 
+export type ChangeRequestStatus   = 'pending' | 'in_progress' | 'approved' | 'rejected';
+export type ChangeRequestCategory = 'document' | 'transmittal' | 'project' | 'system' | 'other';
+
+export interface ChangeRequest {
+  id: string;
+  tenantId: string;
+  projectId: string | null;
+  projectName?: string | null;
+  projectCode?: string | null;
+  title: string;
+  description: string;
+  category: ChangeRequestCategory;
+  priority: TaskPriority;
+  status: ChangeRequestStatus;
+  requestedBy: string;
+  requestedByName?: string | null;
+  requestedByEmail?: string | null;
+  reviewedBy: string | null;
+  reviewedByName?: string | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiError {
   error: string;
   message: string;
